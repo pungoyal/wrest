@@ -8,26 +8,28 @@
 
 module Wrest::Native
   class Get < Request
+    alias :super_invoke :invoke
+
     QUERY_PARAMS_SEPERATOR = '?'
-    EMPTY_QUERY_PARAMS = ''
+    EMPTY_QUERY_PARAMS     = ''
 
     attr_reader :cache_proxy
 
     def initialize(wrest_uri, parameters = {}, headers = {}, options = {})
-      follow_redirects = options[:follow_redirects]
+      follow_redirects           = options[:follow_redirects]
       options[:follow_redirects] = (follow_redirects == nil ? true : follow_redirects)
 
-      cache_store = (options[:cache_store] || Wrest::Caching.default_store) unless options[:disable_cache]
-      @cache_proxy = Wrest::CacheProxy::new(self, cache_store)
+      cache_store                = (options[:cache_store] || Wrest::Caching.default_store) unless options[:disable_cache]
+      @cache_proxy               = Wrest::CacheProxy::new(self, cache_store)
 
       super(
-            wrest_uri,
-            Net::HTTP::Get,
-            parameters,
-            nil,
-            headers,
-            options
-          )
+        wrest_uri,
+        Net::HTTP::Get,
+        parameters,
+        nil,
+        headers,
+        options
+      )
     end
 
     # Checks equality between two Wrest::Native::Get objects.
@@ -50,12 +52,17 @@ module Wrest::Native
       self.uri.hash + self.parameters.hash + self.username.hash + self.password.hash + self.verify_mode.hash + 20110106
     end
 
-    #:nodoc:
-    def invoke_with_cache_check
+    def invoke
+      invoke_with_cache
+    end
+
+    def invoke_with_cache
       cache_proxy.get
     end
 
-    alias_method_chain :invoke, :cache_check
+    def invoke_without_cache_check
+      super_invoke
+    end
 
     def build_request_without_cache_store(cache_validation_headers)
       new_headers = headers.clone.merge cache_validation_headers
